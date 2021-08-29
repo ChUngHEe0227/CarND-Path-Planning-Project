@@ -7,6 +7,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
 #include "json.hpp"
+#include "spline.h"
 
 // for convenience
 using nlohmann::json;
@@ -88,16 +89,66 @@ int main() {
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
 
+          int prev_size = previous_path_x.size();
+
           json msgJson;
 
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+        
+          vector<double> ptsx;
+          vector<double> ptsy;
+          
+          double ref_x = car_x;
+          double ref_y = car_y;
+          double ref_yaw = deg2rad(car_yaw);
 
+          if(prev_size <2){
+            double prev_car_x = car_x - cos(car_yaw);
+            double prev_car_y = car_y - sin(car_yaw);
+
+            ptsx.push_back(prev_car_x);
+            ptsx.push_back(car_x);
+
+            ptsx.push_back(prev_car_y);
+            ptsx.push_back(car_y);
+          }
+
+          else 
+          {
+            ref_x = previous_path_x[prev_size-1];
+            ref_y = previous_path_y[prev_size-1];
+
+            double ref_x_prev = previous_path_x[prev_size-1];
+            double ref_y_prev = previous_path_y[prev_size-1];
+            ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
+
+            ptsx.push_back(ref_x_prev);
+            ptsx.push_back(ref_x);
+
+            ptsx.push_back(ref_y_prev);
+            ptsx.push_back(ref_y);
+          }
+          
+          vector<double> nexp_wp0 = getXY(car_s+30,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y);
+          vector<double> nexp_wp0 = getXY(car_s+60,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y);
+          vector<double> nexp_wp0 = getXY(car_s+90,(2+4*lane),map_waypoints_s,map_waypoints_x,map_waypoints_y);
+          
           /**
            * TODO: define a path made up of (x,y) points that the car will visit
            *   sequentially every .02 seconds
            */
-
+          double dist_inc = 0.5;
+          
+          for (int i = 0; i < 50; ++i) 
+          {
+            
+            double next_s = car_s + (i+1)*dist_inc;
+            double next_d = 6;
+            vector<double> xy = getXY(next_s,next_d,map_waypoints_s,map_waypoints_x,map_waypoints_y);
+            next_x_vals.push_back(xy[0]);
+            next_y_vals.push_back(xy[1]);
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
