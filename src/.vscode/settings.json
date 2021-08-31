@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "qr": "cpp",
+        "iostream": "cpp",
+        "iosfwd": "cpp"
+    }
+}
