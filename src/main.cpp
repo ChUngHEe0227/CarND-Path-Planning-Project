@@ -28,7 +28,7 @@ int main() {
   string map_file_ = "../data/highway_map.csv";
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
-  double ref_vel = 0;
+  double ref_vel = 20;
   std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
 
   string line;
@@ -108,38 +108,33 @@ int main() {
           {
             float d = sensor_fusion[i][6];
             if( state.compare("LCL") == 0){
-               if (d<(2+4*(lane-1) +2) && d>(2+4*(lane-1) -2)){
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4]; 
-                double check_speed = sqrt(vx*vx +vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-
-                check_car_s += ((double)prev_size*.02*check_speed);
-                if((check_car_s > car_s) && ((check_car_s - car_s > 30))){
-                  lane--;
-                  state = "KL";
-                   std ::cout<<state<<" "<<lane<<std::endl;
-                  break;
+                if (d<(2+4*(lane-1) +2) && d>(2+4*(lane-1) -2) && lane >0){
+                  double vx = sensor_fusion[i][3];
+                  double vy = sensor_fusion[i][4]; 
+                  double check_speed = sqrt(vx*vx +vy*vy);
+                  double check_car_s = sensor_fusion[i][5];
+                  check_car_s += ((double)prev_size*.02*check_speed);
+                  if(abs(check_car_s - car_s) < 5){
+                    state = "KL";
+                    std ::cout<<state<<"somting happen"<<lane<<std::endl;
+                    break;
+                  }
                 }
-              }
             }
-            if( state.compare("LCR") == 0){
-            
-               if (d<(2+4*(lane+1) +2) && d>(2+4*(lane+1) -2)){
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4]; 
-                double check_speed = sqrt(vx*vx +vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-                
-                check_car_s += ((double)prev_size*.02*check_speed);
-                if((check_car_s > car_s) && ((check_car_s - car_s > 30))){
-                  lane++;
-                  std ::cout<<state<<" "<<lane<<std::endl;
-                  state = "KL";
-                  break;
-                }
-               }
-              }
+            if( state.compare("LCR") == 0){ 
+                if (d<(2+4*(lane+1) +2) && d>(2+4*(lane-1) +2) && lane <2){
+                  double vx = sensor_fusion[i][3];
+                  double vy = sensor_fusion[i][4]; 
+                  double check_speed = sqrt(vx*vx +vy*vy);
+                  double check_car_s = sensor_fusion[i][5];
+                  check_car_s += ((double)prev_size*.02*check_speed);
+                  if(abs(check_car_s - car_s) < 5){
+                    state = "KL";
+                    std ::cout<<state<<"somting happen"<<lane<<std::endl;
+                    break;
+                  }
+                } 
+            }
             else if (state.compare("KL") == 0){
               if (d<(2+4*lane +2) && d>(2+4*lane -2)){
                 double vx = sensor_fusion[i][3];
@@ -150,20 +145,25 @@ int main() {
                 if((check_car_s > car_s) && ((check_car_s - car_s < 30))){
                   state = "PRLC";
                   too_close = true;
+                  std ::cout<<state<<" "<<lane<<std::endl;
                 }
               }
             }
             else if( state.compare("PRLC") == 0){
-                 std ::cout<<state<<" "<<lane<<std::endl;
                 if (d<(2+4*(lane-1) +2) && d>(2+4*(lane-1) -2) && lane >0){
                   double vx = sensor_fusion[i][3];
                   double vy = sensor_fusion[i][4]; 
                   double check_speed = sqrt(vx*vx +vy*vy);
                   double check_car_s = sensor_fusion[i][5];
-                 
                   check_car_s += ((double)prev_size*.02*check_speed);
-                  if((check_car_s > car_s) && ((check_car_s - car_s > 50))){
+                  if((check_car_s > car_s) && ((check_car_s - car_s > 60))){
                     state = "LCL";
+                    std ::cout<<state<<" "<<lane<<std::endl;
+                    break;
+                  }
+                  if((check_car_s > car_s) && ((check_car_s - car_s < 30))){
+                    state = "KL";
+                    std ::cout<<state<<" "<<lane<<std::endl;
                     break;
                   }
                 }
@@ -172,22 +172,49 @@ int main() {
                   double vy = sensor_fusion[i][4]; 
                   double check_speed = sqrt(vx*vx +vy*vy);
                   double check_car_s = sensor_fusion[i][5];
-
                   check_car_s += ((double)prev_size*.02*check_speed);
-                  if((check_car_s > car_s) && ((check_car_s - car_s >60))){
+                  if(check_car_s > car_s && check_car_s - car_s >60){
                     state = "LCR";
+                    std ::cout<<state<<" "<<lane<<std::endl;
+                    break;
+                  }
+                  if((check_car_s > car_s) && ((check_car_s - car_s < 30))){
+                    state = "KL";
+                    std ::cout<<state<<" "<<lane<<std::endl;
                     break;
                   }
                 }
               }
+
           }
+          if( state.compare("PRLC") == 0){
+              if (lane <2){
+                state = "LCR";
+                std ::cout<<state<<" "<<lane<<std::endl;
+              }
+              else{
+                state ="LCL";
+                std ::cout<<state<<" "<<lane<<std::endl;
+              }
+            
+          }
+          else if( state.compare("LCL") == 0){
+          
+              lane--;
+              state = "KL";
+              std ::cout<<state<<" "<<lane<<std::endl;
+            }
+          else if( state.compare("LCR") == 0){ 
+              lane++;
+              state = "KL";
+              std ::cout<<state<<" "<<lane<<std::endl;
+            }
           if (too_close){
             ref_vel -= 0.224; 
           }
           else if(ref_vel <49.5){
             ref_vel += 0.224;
           }
-          std::cout <<  state << std::endl;
         
           vector<double> ptsx;
           vector<double> ptsy;
